@@ -1,8 +1,5 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { configVariable, defineConfig } from "hardhat/config";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const creditcoinRpcUrl = process.env.CREDITCOIN_RPC ?? "http://127.0.0.1:8545";
 const creditcoinPrivateKey = process.env.PRIVATE_KEY;
