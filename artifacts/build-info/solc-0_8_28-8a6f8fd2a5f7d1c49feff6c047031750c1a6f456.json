@@ -1,0 +1,35 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-8a6f8fd2a5f7d1c49feff6c047031750c1a6f456",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/ProofOfCredit.sol": "project/contracts/ProofOfCredit.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/ProofOfCredit.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract ProofOfCredit {\n    enum CreditTier {\n        None,\n        Bronze,\n        Silver,\n        Gold\n    }\n\n    struct Borrower {\n        uint256 creditScore;\n        uint256 totalRepayments;\n        bool registered;\n    }\n\n    address public owner;\n    address public immutable initialOwner;\n    uint256 public eligibilityThreshold = 50;\n\n    mapping(address => Borrower) public borrowers;\n    mapping(address => bool) public lenders;\n    mapping(address => bytes32[]) public creditHistoryHashes;\n\n    error NotOwner();\n    error NotLender();\n    error ZeroAddress();\n    error BorrowerAlreadyRegistered();\n    error BorrowerNotRegistered();\n    error LenderAlreadyRegistered();\n\n    event BorrowerRegistered(address indexed borrower);\n    event RepaymentRecorded(address indexed borrower, uint256 newScore, bytes32 metadataHash);\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\n    event LenderRegistered(address indexed lender);\n    event EligibilityThresholdUpdated(uint256 oldValue, uint256 newValue);\n\n    constructor() {\n        owner = msg.sender;\n        initialOwner = msg.sender;\n\n        emit OwnershipTransferred(address(0), msg.sender);\n    }\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    modifier onlyLender() {\n        if (!lenders[msg.sender]) revert NotLender();\n        _;\n    }\n\n    /// @notice Registers the caller as a borrower.\n    /// @dev Reverts if the caller is already registered.\n    function registerBorrower() external {\n        Borrower storage borrower = borrowers[msg.sender];\n        if (borrower.registered) revert BorrowerAlreadyRegistered();\n\n        borrower.registered = true;\n\n        emit BorrowerRegistered(msg.sender);\n    }\n\n    /// @notice Transfers contract ownership to a new owner.\n    /// @param newOwner Address of the new owner.\n    /// @dev Callable only by the current owner.\n    function transferOwnership(address newOwner) external onlyOwner {\n        if (newOwner == address(0)) revert ZeroAddress();\n\n        address previousOwner = owner;\n        owner = newOwner;\n\n        emit OwnershipTransferred(previousOwner, newOwner);\n    }\n\n    /// @notice Registers a lender allowed to record repayments.\n    /// @param lender Address to authorize as lender.\n    /// @dev Callable only by the contract owner.\n    function registerLender(address lender) external onlyOwner {\n        if (lender == address(0)) revert ZeroAddress();\n        if (lenders[lender]) revert LenderAlreadyRegistered();\n\n        lenders[lender] = true;\n\n        emit LenderRegistered(lender);\n    }\n\n    /// @notice Updates the global eligibility threshold.\n    /// @param newThreshold New minimum score required for eligibility.\n    /// @dev Callable only by the contract owner.\n    function setEligibilityThreshold(uint256 newThreshold) external onlyOwner {\n        uint256 oldThreshold = eligibilityThreshold;\n        eligibilityThreshold = newThreshold;\n\n        emit EligibilityThresholdUpdated(oldThreshold, newThreshold);\n    }\n\n    /// @notice Records a repayment for a borrower and updates credit score.\n    /// @param borrowerAddr Address of the borrower.\n    /// @param metadataHash Hash anchor for off-chain repayment metadata.\n    /// @dev Callable only by registered lenders.\n    /// Adds +10 per repayment and an additional +5 bonus every 5 repayments.\n    function recordRepayment(address borrowerAddr, bytes32 metadataHash) external onlyLender {\n        Borrower storage borrower = borrowers[borrowerAddr];\n        if (!borrower.registered) revert BorrowerNotRegistered();\n\n        uint256 newRepayments;\n        uint256 newCreditScore;\n\n        unchecked {\n            newRepayments = borrower.totalRepayments + 1;\n            newCreditScore = borrower.creditScore + 10;\n            if (newRepayments % 5 == 0) {\n                newCreditScore += 5;\n            }\n        }\n\n        borrower.totalRepayments = newRepayments;\n        borrower.creditScore = newCreditScore;\n        creditHistoryHashes[borrowerAddr].push(metadataHash);\n\n        emit RepaymentRecorded(borrowerAddr, newCreditScore, metadataHash);\n    }\n\n    /// @notice Returns whether a borrower is eligible for credit.\n    /// @param borrowerAddr Address of the borrower.\n    /// @return True if borrower is registered and has score >= eligibilityThreshold.\n    function getEligibility(address borrowerAddr) external view returns (bool) {\n        Borrower storage borrower = borrowers[borrowerAddr];\n        return borrower.registered && borrower.creditScore >= eligibilityThreshold;\n    }\n\n    /// @notice Returns the deterministic credit tier derived from score.\n    /// @param borrowerAddr Address of the borrower.\n    /// @return CreditTier classification for the borrower.\n    function getCreditTier(address borrowerAddr) public view returns (CreditTier) {\n        uint256 score = borrowers[borrowerAddr].creditScore;\n        if (score == 0) {\n            return CreditTier.None;\n        }\n        if (score < 50) {\n            return CreditTier.Bronze;\n        }\n        if (score < 80) {\n            return CreditTier.Silver;\n        }\n\n        return CreditTier.Gold;\n    }\n\n    /// @notice Returns full borrower profile data.\n    /// @param borrowerAddr Address of the borrower.\n    /// @return Borrower struct containing score, repayments, and registration status.\n    function getBorrower(address borrowerAddr) external view returns (Borrower memory) {\n        return borrowers[borrowerAddr];\n    }\n}\n"
+      }
+    }
+  }
+}

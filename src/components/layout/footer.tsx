@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
+import { deployedProofOfCreditAddress } from "@/lib/contracts/proofOfCredit";
 
 const productLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/repayments", label: "Repayments" },
   { href: "/governance", label: "Governance" },
+  { href: "/protocol", label: "Protocol" },
   { href: "/docs", label: "Docs" },
   { href: "/about", label: "About" },
 ];
@@ -50,7 +52,7 @@ export function Footer() {
                 </a>
               </li>
             ))}
-            <li className="pt-1 text-[#9EB5A5]">Contract: 0xB99b7B14...31def6</li>
+            <li className="pt-1 text-[#9EB5A5]">Contract: {`${deployedProofOfCreditAddress.slice(0, 10)}...${deployedProofOfCreditAddress.slice(-6)}`}</li>
           </ul>
         </div>
       </div>

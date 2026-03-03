@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated artifacts and type bindings:
+    "artifacts/**",
+    "cache/**",
+    "types/**",
   ]),
 ]);
 

@@ -2,6 +2,13 @@
 pragma solidity ^0.8.28;
 
 contract ProofOfCredit {
+    enum CreditTier {
+        None,
+        Bronze,
+        Silver,
+        Gold
+    }
+
     struct Borrower {
         uint256 creditScore;
         uint256 totalRepayments;
@@ -10,9 +17,11 @@ contract ProofOfCredit {
 
     address public owner;
     address public immutable initialOwner;
+    uint256 public eligibilityThreshold = 50;
 
     mapping(address => Borrower) public borrowers;
     mapping(address => bool) public lenders;
+    mapping(address => bytes32[]) public creditHistoryHashes;
 
     error NotOwner();
     error NotLender();
@@ -22,9 +31,10 @@ contract ProofOfCredit {
     error LenderAlreadyRegistered();
 
     event BorrowerRegistered(address indexed borrower);
-    event RepaymentRecorded(address indexed borrower, uint256 newCreditScore, uint256 totalRepayments);
+    event RepaymentRecorded(address indexed borrower, uint256 newScore, bytes32 metadataHash);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event LenderRegistered(address indexed lender);
+    event EligibilityThresholdUpdated(uint256 oldValue, uint256 newValue);
 
     constructor() {
         owner = msg.sender;
@@ -78,11 +88,22 @@ contract ProofOfCredit {
         emit LenderRegistered(lender);
     }
 
+    /// @notice Updates the global eligibility threshold.
+    /// @param newThreshold New minimum score required for eligibility.
+    /// @dev Callable only by the contract owner.
+    function setEligibilityThreshold(uint256 newThreshold) external onlyOwner {
+        uint256 oldThreshold = eligibilityThreshold;
+        eligibilityThreshold = newThreshold;
+
+        emit EligibilityThresholdUpdated(oldThreshold, newThreshold);
+    }
+
     /// @notice Records a repayment for a borrower and updates credit score.
     /// @param borrowerAddr Address of the borrower.
+    /// @param metadataHash Hash anchor for off-chain repayment metadata.
     /// @dev Callable only by registered lenders.
     /// Adds +10 per repayment and an additional +5 bonus every 5 repayments.
-    function recordRepayment(address borrowerAddr) external onlyLender {
+    function recordRepayment(address borrowerAddr, bytes32 metadataHash) external onlyLender {
         Borrower storage borrower = borrowers[borrowerAddr];
         if (!borrower.registered) revert BorrowerNotRegistered();
 
@@ -99,16 +120,35 @@ contract ProofOfCredit {
 
         borrower.totalRepayments = newRepayments;
         borrower.creditScore = newCreditScore;
+        creditHistoryHashes[borrowerAddr].push(metadataHash);
 
-        emit RepaymentRecorded(borrowerAddr, newCreditScore, newRepayments);
+        emit RepaymentRecorded(borrowerAddr, newCreditScore, metadataHash);
     }
 
     /// @notice Returns whether a borrower is eligible for credit.
     /// @param borrowerAddr Address of the borrower.
-    /// @return True if borrower is registered and has score >= 50.
+    /// @return True if borrower is registered and has score >= eligibilityThreshold.
     function getEligibility(address borrowerAddr) external view returns (bool) {
         Borrower storage borrower = borrowers[borrowerAddr];
-        return borrower.registered && borrower.creditScore >= 50;
+        return borrower.registered && borrower.creditScore >= eligibilityThreshold;
+    }
+
+    /// @notice Returns the deterministic credit tier derived from score.
+    /// @param borrowerAddr Address of the borrower.
+    /// @return CreditTier classification for the borrower.
+    function getCreditTier(address borrowerAddr) public view returns (CreditTier) {
+        uint256 score = borrowers[borrowerAddr].creditScore;
+        if (score == 0) {
+            return CreditTier.None;
+        }
+        if (score < 50) {
+            return CreditTier.Bronze;
+        }
+        if (score < 80) {
+            return CreditTier.Silver;
+        }
+
+        return CreditTier.Gold;
     }
 
     /// @notice Returns full borrower profile data.

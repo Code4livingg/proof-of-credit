@@ -1,5 +1,5 @@
 import { network } from "hardhat";
-import { getAddress, isAddress } from "viem";
+import { getAddress, isAddress, keccak256, stringToHex } from "viem";
 
 function line(message = "") {
   console.log(message);
@@ -19,16 +19,27 @@ type BorrowerView = {
   registered: boolean;
 };
 
+
 type ProofOfCreditHandle = {
   waitForDeployment(): Promise<unknown>;
   getAddress(): Promise<string>;
   registerBorrower(): Promise<TxLike>;
   owner(): Promise<string>;
   registerLender(lender: string): Promise<TxLike>;
-  recordRepayment(borrowerAddr: string): Promise<TxLike>;
+  recordRepayment(borrowerAddr: string, metadataHash: string): Promise<TxLike>;
   getBorrower(borrowerAddr: string): Promise<BorrowerView>;
   getEligibility(borrowerAddr: string): Promise<boolean>;
+  getCreditTier(borrowerAddr: string): Promise<bigint | number>;
+  creditHistoryHashes(borrowerAddr: string, index: bigint): Promise<string>;
 };
+
+function tierToLabel(tier: bigint | number): string {
+  const normalized = Number(tier);
+  if (normalized === 3) return "Gold";
+  if (normalized === 2) return "Silver";
+  if (normalized === 1) return "Bronze";
+  return "None";
+}
 
 async function main(): Promise<void> {
   const connection = await network.connect({ network: "creditcoinTestnet", chainType: "l1" });
@@ -42,11 +53,8 @@ async function main(): Promise<void> {
     line(`Deployer:           ${deployer.address}`);
 
     const contractFactory = await ethers.getContractFactory("ProofOfCredit");
-    const deployUntyped = contractFactory.deploy as (...args: unknown[]) => ReturnType<
-      typeof contractFactory.deploy
-    >;
 
-    const cliAddress = process.argv[2];
+    const cliAddress = process.argv.find((value) => isAddress(value));
     const envAddress = process.env.PROOF_OF_CREDIT_ADDRESS;
     const providedAddress = cliAddress ?? envAddress;
 
@@ -67,9 +75,12 @@ async function main(): Promise<void> {
 
       const constructorInputs = contractFactory.interface.deploy.inputs;
       if (constructorInputs.length === 0) {
-        contract = (await deployUntyped()) as unknown as ProofOfCreditHandle;
+        contract = (await contractFactory.deploy()) as unknown as ProofOfCreditHandle;
       } else if (constructorInputs.length === 1) {
-        contract = (await deployUntyped(deployer.address)) as unknown as ProofOfCreditHandle;
+        const deployWithOwner = contractFactory.deploy.bind(contractFactory) as unknown as (
+          owner: string
+        ) => ReturnType<typeof contractFactory.deploy>;
+        contract = (await deployWithOwner(deployer.address)) as unknown as ProofOfCreditHandle;
       } else {
         throw new Error("Unsupported constructor shape for ProofOfCredit");
       }
@@ -94,18 +105,24 @@ async function main(): Promise<void> {
     }
 
     for (let i = 1; i <= 5; i += 1) {
-      const repaymentTx = await contract.recordRepayment(deployer.address);
+      const metadataHash = keccak256(stringToHex(`repayment-${i}`));
+      const repaymentTx = await contract.recordRepayment(deployer.address, metadataHash);
       await repaymentTx.wait();
-      line(`Repayment ${i}/5 recorded`);
+      line(`Repayment ${i}/5 recorded with metadata hash ${metadataHash}`);
     }
 
     const borrower = await contract.getBorrower(deployer.address);
     const eligibility = await contract.getEligibility(deployer.address);
+    const tier = await contract.getCreditTier(deployer.address);
+
+    const historyHashCount = Number(borrower.totalRepayments);
 
     section("Demo Result");
     line(`Final credit score: ${borrower.creditScore.toString()}`);
     line(`Total repayments:   ${borrower.totalRepayments.toString()}`);
+    line(`Credit tier:        ${tierToLabel(tier)}`);
     line(`Eligibility:        ${eligibility ? "Eligible" : "Not Eligible"}`);
+    line(`History hash count: ${historyHashCount}`);
 
     line("\nDemo completed successfully.");
   } finally {

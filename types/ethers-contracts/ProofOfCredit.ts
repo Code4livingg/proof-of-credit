@@ -13,23 +13,30 @@ export declare namespace ProofOfCredit {
     }
 
   export interface ProofOfCreditInterface extends Interface {
-    getFunction(nameOrSignature: "borrowers" | "getBorrower" | "getEligibility" | "initialOwner" | "lenders" | "owner" | "recordRepayment" | "registerBorrower" | "registerLender" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "borrowers" | "creditHistoryHashes" | "eligibilityThreshold" | "getBorrower" | "getCreditTier" | "getEligibility" | "initialOwner" | "lenders" | "owner" | "recordRepayment" | "registerBorrower" | "registerLender" | "setEligibilityThreshold" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "BorrowerRegistered" | "LenderRegistered" | "OwnershipTransferred" | "RepaymentRecorded"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "BorrowerRegistered" | "EligibilityThresholdUpdated" | "LenderRegistered" | "OwnershipTransferred" | "RepaymentRecorded"): EventFragment;
 
     encodeFunctionData(functionFragment: 'borrowers', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'creditHistoryHashes', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'eligibilityThreshold', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getBorrower', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'getCreditTier', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getEligibility', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'initialOwner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'lenders', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
-encodeFunctionData(functionFragment: 'recordRepayment', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'recordRepayment', values: [AddressLike, BytesLike]): string;
 encodeFunctionData(functionFragment: 'registerBorrower', values?: undefined): string;
 encodeFunctionData(functionFragment: 'registerLender', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'setEligibilityThreshold', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
     decodeFunctionResult(functionFragment: 'borrowers', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'creditHistoryHashes', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'eligibilityThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getBorrower', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getCreditTier', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEligibility', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'initialOwner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'lenders', data: BytesLike): Result;
@@ -37,6 +44,7 @@ decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'recordRepayment', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerBorrower', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerLender', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setEligibilityThreshold', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
@@ -45,6 +53,18 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type InputTuple = [borrower: AddressLike];
       export type OutputTuple = [borrower: string];
       export interface OutputObject {borrower: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace EligibilityThresholdUpdatedEvent {
+      export type InputTuple = [oldValue: BigNumberish, newValue: BigNumberish];
+      export type OutputTuple = [oldValue: bigint, newValue: bigint];
+      export interface OutputObject {oldValue: bigint, newValue: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -78,9 +98,9 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
   
 
     export namespace RepaymentRecordedEvent {
-      export type InputTuple = [borrower: AddressLike, newCreditScore: BigNumberish, totalRepayments: BigNumberish];
-      export type OutputTuple = [borrower: string, newCreditScore: bigint, totalRepayments: bigint];
-      export interface OutputObject {borrower: string, newCreditScore: bigint, totalRepayments: bigint };
+      export type InputTuple = [borrower: AddressLike, newScore: BigNumberish, metadataHash: BytesLike];
+      export type OutputTuple = [borrower: string, newScore: bigint, metadataHash: string];
+      export interface OutputObject {borrower: string, newScore: bigint, metadataHash: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -131,9 +151,33 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    creditHistoryHashes: TypedContractMethod<
+      [arg0: AddressLike, arg1: BigNumberish, ],
+      [string],
+      'view'
+    >
+    
+
+    
+    eligibilityThreshold: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
     getBorrower: TypedContractMethod<
       [borrowerAddr: AddressLike, ],
       [ProofOfCredit.BorrowerStructOutput],
+      'view'
+    >
+    
+
+    
+    getCreditTier: TypedContractMethod<
+      [borrowerAddr: AddressLike, ],
+      [bigint],
       'view'
     >
     
@@ -172,7 +216,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     recordRepayment: TypedContractMethod<
-      [borrowerAddr: AddressLike, ],
+      [borrowerAddr: AddressLike, metadataHash: BytesLike, ],
       [void],
       'nonpayable'
     >
@@ -195,6 +239,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setEligibilityThreshold: TypedContractMethod<
+      [newThreshold: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -210,9 +262,24 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       [[bigint, bigint, boolean] & {creditScore: bigint, totalRepayments: bigint, registered: boolean }],
       'view'
     >;
+getFunction(nameOrSignature: 'creditHistoryHashes'): TypedContractMethod<
+      [arg0: AddressLike, arg1: BigNumberish, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'eligibilityThreshold'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getBorrower'): TypedContractMethod<
       [borrowerAddr: AddressLike, ],
       [ProofOfCredit.BorrowerStructOutput],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getCreditTier'): TypedContractMethod<
+      [borrowerAddr: AddressLike, ],
+      [bigint],
       'view'
     >;
 getFunction(nameOrSignature: 'getEligibility'): TypedContractMethod<
@@ -236,7 +303,7 @@ getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'recordRepayment'): TypedContractMethod<
-      [borrowerAddr: AddressLike, ],
+      [borrowerAddr: AddressLike, metadataHash: BytesLike, ],
       [void],
       'nonpayable'
     >;
@@ -250,6 +317,11 @@ getFunction(nameOrSignature: 'registerLender'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setEligibilityThreshold'): TypedContractMethod<
+      [newThreshold: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -257,6 +329,7 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
     >;
 
     getEvent(key: 'BorrowerRegistered'): TypedContractEvent<BorrowerRegisteredEvent.InputTuple, BorrowerRegisteredEvent.OutputTuple, BorrowerRegisteredEvent.OutputObject>;
+getEvent(key: 'EligibilityThresholdUpdated'): TypedContractEvent<EligibilityThresholdUpdatedEvent.InputTuple, EligibilityThresholdUpdatedEvent.OutputTuple, EligibilityThresholdUpdatedEvent.OutputObject>;
 getEvent(key: 'LenderRegistered'): TypedContractEvent<LenderRegisteredEvent.InputTuple, LenderRegisteredEvent.OutputTuple, LenderRegisteredEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'RepaymentRecorded'): TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
@@ -267,6 +340,10 @@ getEvent(key: 'RepaymentRecorded'): TypedContractEvent<RepaymentRecordedEvent.In
       BorrowerRegistered: TypedContractEvent<BorrowerRegisteredEvent.InputTuple, BorrowerRegisteredEvent.OutputTuple, BorrowerRegisteredEvent.OutputObject>;
     
 
+      'EligibilityThresholdUpdated(uint256,uint256)': TypedContractEvent<EligibilityThresholdUpdatedEvent.InputTuple, EligibilityThresholdUpdatedEvent.OutputTuple, EligibilityThresholdUpdatedEvent.OutputObject>;
+      EligibilityThresholdUpdated: TypedContractEvent<EligibilityThresholdUpdatedEvent.InputTuple, EligibilityThresholdUpdatedEvent.OutputTuple, EligibilityThresholdUpdatedEvent.OutputObject>;
+    
+
       'LenderRegistered(address)': TypedContractEvent<LenderRegisteredEvent.InputTuple, LenderRegisteredEvent.OutputTuple, LenderRegisteredEvent.OutputObject>;
       LenderRegistered: TypedContractEvent<LenderRegisteredEvent.InputTuple, LenderRegisteredEvent.OutputTuple, LenderRegisteredEvent.OutputObject>;
     
@@ -275,7 +352,7 @@ getEvent(key: 'RepaymentRecorded'): TypedContractEvent<RepaymentRecordedEvent.In
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
     
 
-      'RepaymentRecorded(address,uint256,uint256)': TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
+      'RepaymentRecorded(address,uint256,bytes32)': TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
       RepaymentRecorded: TypedContractEvent<RepaymentRecordedEvent.InputTuple, RepaymentRecordedEvent.OutputTuple, RepaymentRecordedEvent.OutputObject>;
     
     };

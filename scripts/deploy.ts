@@ -11,7 +11,6 @@ async function main(): Promise<void> {
     const proofOfCreditFactory = await ethers.getContractFactory("ProofOfCredit");
     const constructorInputs = proofOfCreditFactory.interface.deploy.inputs;
 
-    let proofOfCredit: Contract;
     let deployedProofOfCredit;
     if (constructorInputs.length === 0) {
       deployedProofOfCredit = await proofOfCreditFactory.deploy();
@@ -27,7 +26,11 @@ async function main(): Promise<void> {
 
     await deployedProofOfCredit.waitForDeployment();
     const contractAddress = await deployedProofOfCredit.getAddress();
-    proofOfCredit = new ethers.Contract(contractAddress, proofOfCreditFactory.interface, deployer);
+    const proofOfCredit = new ethers.Contract(
+      contractAddress,
+      proofOfCreditFactory.interface,
+      deployer
+    ) as Contract;
 
     console.log(`Network name: ${networkName}`);
     console.log(`Deployer address: ${deployer.address}`);
