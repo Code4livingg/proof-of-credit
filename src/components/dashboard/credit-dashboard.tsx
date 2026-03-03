@@ -118,34 +118,32 @@ export function CreditDashboard() {
     );
   };
 
-  const recordRepayment = (borrower: `0x${string}`) => {
+  const recordRepayment = (borrowerAddr: `0x${string}`) => {
     if (!startAction("Record Repayment")) return;
     writeContract(
       {
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
         functionName: "recordRepayment",
-        args: [borrower],
+        args: [borrowerAddr],
       },
       { onError: handleWriteError }
     );
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#172554_0%,_#020617_40%,_#020617_100%)] px-4 py-10 text-slate-100">
-      <div className="mx-auto grid w-full max-w-6xl gap-6">
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-slate-900/80 to-slate-800/40 p-8">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Proof of Credit</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
-            Credit Risk Dashboard
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Monitor borrower performance and submit regulated credit updates on Creditcoin Testnet.
+    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="grid gap-6">
+        <header className="rounded-2xl border border-[#1F2D25] bg-[#101A1F] p-8 shadow-[0_0_28px_rgba(0,255,136,0.12)]">
+          <p className="text-xs uppercase tracking-[0.24em] text-[#6B7F74]">ProofOfCredit</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#E6F5EC]">Credit Risk Dashboard</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[#9EB5A5]">
+            Monitor borrower performance and submit regulated credit updates on Creditcoin CC3 Testnet.
           </p>
         </header>
 
         {!contractReady ? (
-          <div className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-200">
             Set <code className="rounded bg-black/30 px-1">NEXT_PUBLIC_PROOF_OF_CREDIT_ADDRESS</code> in
             your environment to enable dashboard actions.
           </div>
@@ -159,18 +157,18 @@ export function CreditDashboard() {
           <Card title="Borrower Profile" subtitle="Live score state for connected wallet">
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wider text-slate-500">Credit Score</p>
-                  <p className="mt-2 text-2xl font-semibold text-cyan-300">{borrower.creditScore.toString()}</p>
+                <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
+                  <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Credit Score</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#00FF88]">{borrower.creditScore.toString()}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wider text-slate-500">Repayments</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-100">
+                <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
+                  <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Repayments</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#E6F5EC]">
                     {borrower.totalRepayments.toString()}
                   </p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
-                  <p className="text-xs uppercase tracking-wider text-slate-500">Eligibility</p>
+                <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
+                  <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Eligibility</p>
                   <span
                     className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
                       isEligible ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200"
@@ -193,7 +191,7 @@ export function CreditDashboard() {
               type="button"
               onClick={registerBorrower}
               disabled={!isConnected || !contractReady || busy}
-              className="rounded-lg border border-cyan-300/40 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-[#00A65A] bg-[#00A65A]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00FF88] hover:bg-[#00FF88]/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy && actionLabel === "Register Borrower" ? "Submitting..." : "Register Borrower"}
             </button>
@@ -206,13 +204,13 @@ export function CreditDashboard() {
                 placeholder="Borrower address (0x...)"
                 value={borrowerAddress}
                 onChange={(event) => setBorrowerAddress(event.target.value.trim())}
-                className="w-full rounded-lg border border-white/15 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A65A]"
               />
               <button
                 type="button"
                 onClick={() => recordRepayment(borrowerAddress as `0x${string}`)}
                 disabled={!isConnected || !contractReady || !isAddress(borrowerAddress) || busy}
-                className="rounded-lg border border-slate-300/30 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00FF88] hover:text-[#00FF88] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Record Repayment" ? "Submitting..." : "Record Repayment"}
               </button>
@@ -228,20 +226,20 @@ export function CreditDashboard() {
                 placeholder="Lender address (0x...)"
                 value={lenderAddress}
                 onChange={(event) => setLenderAddress(event.target.value.trim())}
-                className="w-full rounded-lg border border-white/15 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A65A]"
               />
               <button
                 type="button"
                 onClick={() => registerLender(lenderAddress as `0x${string}`)}
                 disabled={!contractReady || !isAddress(lenderAddress) || busy}
-                className="rounded-lg border border-emerald-300/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[#00A65A] bg-[#00A65A]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00FF88] hover:bg-[#00FF88]/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Register Lender" ? "Submitting..." : "Register Lender"}
               </button>
             </div>
           </Card>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-400">
+          <div className="rounded-2xl border border-[#1F2D25] bg-[#101A1F] p-4 text-sm text-[#9EB5A5]">
             Owner-only lender management is hidden for non-owner wallets.
           </div>
         )}

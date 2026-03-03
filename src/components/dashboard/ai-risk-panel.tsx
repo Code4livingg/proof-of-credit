@@ -5,6 +5,11 @@ type AiRiskPanelProps = {
 
 type RiskTier = "Low Risk" | "Medium Risk" | "High Risk";
 
+type ConfidenceLevel = {
+  label: number;
+  widthClass: string;
+};
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -54,9 +59,16 @@ function getRiskAssessment(creditScore: number, totalRepayments: number): {
   };
 }
 
-function getConfidence(creditScore: number): number {
-  // Mocked confidence signal derived from score for UI-only guidance.
-  return clamp(Math.round(35 + creditScore * 0.65), 40, 95);
+function getConfidence(creditScore: number): ConfidenceLevel {
+  const value = clamp(Math.round(35 + creditScore * 0.65), 40, 95);
+
+  if (value < 56) {
+    return { label: value, widthClass: "w-[45%]" };
+  }
+  if (value < 76) {
+    return { label: value, widthClass: "w-[68%]" };
+  }
+  return { label: value, widthClass: "w-[88%]" };
 }
 
 export function AiRiskPanel({ creditScore, totalRepayments }: AiRiskPanelProps) {
@@ -71,26 +83,23 @@ export function AiRiskPanel({ creditScore, totalRepayments }: AiRiskPanelProps) 
         : "bg-emerald-500/20 text-emerald-200 border-emerald-400/30";
 
   return (
-    <section className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
+    <section className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">AI Risk Panel</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#6B7F74]">AI Risk Panel</p>
         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeClassName}`}>
           {assessment.tier}
         </span>
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-slate-300">{assessment.explanation}</p>
+      <p className="mt-3 text-sm leading-relaxed text-[#9EB5A5]">{assessment.explanation}</p>
 
       <div className="mt-4">
-        <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
+        <div className="mb-1 flex items-center justify-between text-xs text-[#6B7F74]">
           <span>Confidence</span>
-          <span>{confidence}%</span>
+          <span>{confidence.label}%</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500"
-            style={{ width: `${confidence}%` }}
-          />
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[#13231A]">
+          <div className={`h-full rounded-full bg-[#00C96B] ${confidence.widthClass}`} />
         </div>
       </div>
     </section>

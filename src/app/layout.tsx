@@ -3,8 +3,8 @@ import "./globals.css";
 import { Web3Provider } from "@/components/providers/web3-provider";
 
 export const metadata: Metadata = {
-  title: "Proof of Credit Dashboard",
-  description: "Production dashboard for Creditcoin-based borrower scoring",
+  title: "ProofOfCredit | Regulated On-Chain Credit Infrastructure",
+  description: "Institutional borrower scoring and repayment verification on Creditcoin CC3 Testnet.",
 };
 
 export default function RootLayout({
