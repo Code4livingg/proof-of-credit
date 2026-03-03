@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-6c3e2e97919059d33e02cddad3e9f2ec42c7b2d3",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/Counter.sol": "project/contracts/Counter.sol",
+    "contracts/ProofOfCredit.sol": "project/contracts/ProofOfCredit.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      },
+      "project/contracts/ProofOfCredit.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract ProofOfCredit {\n    struct Borrower {\n        uint256 creditScore;\n        uint256 totalRepayments;\n        bool registered;\n    }\n\n    address public owner;\n    address public immutable initialOwner;\n\n    mapping(address => Borrower) public borrowers;\n    mapping(address => bool) public lenders;\n\n    error NotOwner();\n    error NotLender();\n    error ZeroAddress();\n    error BorrowerAlreadyRegistered();\n    error BorrowerNotRegistered();\n    error LenderAlreadyRegistered();\n\n    event BorrowerRegistered(address indexed borrower);\n    event RepaymentRecorded(address indexed borrower, uint256 newCreditScore, uint256 totalRepayments);\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\n    event LenderRegistered(address indexed lender);\n\n    constructor() {\n        owner = msg.sender;\n        initialOwner = msg.sender;\n\n        emit OwnershipTransferred(address(0), msg.sender);\n    }\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    modifier onlyLender() {\n        if (!lenders[msg.sender]) revert NotLender();\n        _;\n    }\n\n    /// @notice Registers the caller as a borrower.\n    /// @dev Reverts if the caller is already registered.\n    function registerBorrower() external {\n        Borrower storage borrower = borrowers[msg.sender];\n        if (borrower.registered) revert BorrowerAlreadyRegistered();\n\n        borrower.registered = true;\n\n        emit BorrowerRegistered(msg.sender);\n    }\n\n    /// @notice Transfers contract ownership to a new owner.\n    /// @param newOwner Address of the new owner.\n    /// @dev Callable only by the current owner.\n    function transferOwnership(address newOwner) external onlyOwner {\n        if (newOwner == address(0)) revert ZeroAddress();\n\n        address previousOwner = owner;\n        owner = newOwner;\n\n        emit OwnershipTransferred(previousOwner, newOwner);\n    }\n\n    /// @notice Registers a lender allowed to record repayments.\n    /// @param lender Address to authorize as lender.\n    /// @dev Callable only by the contract owner.\n    function registerLender(address lender) external onlyOwner {\n        if (lender == address(0)) revert ZeroAddress();\n        if (lenders[lender]) revert LenderAlreadyRegistered();\n\n        lenders[lender] = true;\n\n        emit LenderRegistered(lender);\n    }\n\n    /// @notice Records a repayment for a borrower and updates credit score.\n    /// @param borrowerAddr Address of the borrower.\n    /// @dev Callable only by registered lenders.\n    /// Adds +10 per repayment and an additional +5 bonus every 5 repayments.\n    function recordRepayment(address borrowerAddr) external onlyLender {\n        Borrower storage borrower = borrowers[borrowerAddr];\n        if (!borrower.registered) revert BorrowerNotRegistered();\n\n        uint256 newRepayments;\n        uint256 newCreditScore;\n\n        unchecked {\n            newRepayments = borrower.totalRepayments + 1;\n            newCreditScore = borrower.creditScore + 10;\n            if (newRepayments % 5 == 0) {\n                newCreditScore += 5;\n            }\n        }\n\n        borrower.totalRepayments = newRepayments;\n        borrower.creditScore = newCreditScore;\n\n        emit RepaymentRecorded(borrowerAddr, newCreditScore, newRepayments);\n    }\n\n    /// @notice Returns whether a borrower is eligible for credit.\n    /// @param borrowerAddr Address of the borrower.\n    /// @return True if borrower is registered and has score >= 50.\n    function getEligibility(address borrowerAddr) external view returns (bool) {\n        Borrower storage borrower = borrowers[borrowerAddr];\n        return borrower.registered && borrower.creditScore >= 50;\n    }\n\n    /// @notice Returns full borrower profile data.\n    /// @param borrowerAddr Address of the borrower.\n    /// @return Borrower struct containing score, repayments, and registration status.\n    function getBorrower(address borrowerAddr) external view returns (Borrower memory) {\n        return borrowers[borrowerAddr];\n    }\n}\n"
+      }
+    }
+  }
+}
