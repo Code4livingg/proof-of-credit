@@ -159,7 +159,7 @@ export function CreditDashboard() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
                   <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Credit Score</p>
-                  <p className="mt-2 text-2xl font-semibold text-[#00FF88]">{borrower.creditScore.toString()}</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#00C97B]">{borrower.creditScore.toString()}</p>
                 </div>
                 <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
                   <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Repayments</p>
@@ -191,7 +191,7 @@ export function CreditDashboard() {
               type="button"
               onClick={registerBorrower}
               disabled={!isConnected || !contractReady || busy}
-              className="rounded-lg border border-[#00A65A] bg-[#00A65A]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00FF88] hover:bg-[#00FF88]/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-[#00A965] bg-[#00A965]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00C97B] hover:bg-[#00C97B]/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy && actionLabel === "Register Borrower" ? "Submitting..." : "Register Borrower"}
             </button>
@@ -204,13 +204,13 @@ export function CreditDashboard() {
                 placeholder="Borrower address (0x...)"
                 value={borrowerAddress}
                 onChange={(event) => setBorrowerAddress(event.target.value.trim())}
-                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A65A]"
+                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A965]"
               />
               <button
                 type="button"
                 onClick={() => recordRepayment(borrowerAddress as `0x${string}`)}
                 disabled={!isConnected || !contractReady || !isAddress(borrowerAddress) || busy}
-                className="rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00FF88] hover:text-[#00FF88] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00C97B] hover:text-[#00C97B] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Record Repayment" ? "Submitting..." : "Record Repayment"}
               </button>
@@ -226,13 +226,13 @@ export function CreditDashboard() {
                 placeholder="Lender address (0x...)"
                 value={lenderAddress}
                 onChange={(event) => setLenderAddress(event.target.value.trim())}
-                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A65A]"
+                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A965]"
               />
               <button
                 type="button"
                 onClick={() => registerLender(lenderAddress as `0x${string}`)}
                 disabled={!contractReady || !isAddress(lenderAddress) || busy}
-                className="rounded-lg border border-[#00A65A] bg-[#00A65A]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00FF88] hover:bg-[#00FF88]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-[#00A965] bg-[#00A965]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00C97B] hover:bg-[#00C97B]/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Register Lender" ? "Submitting..." : "Register Lender"}
               </button>

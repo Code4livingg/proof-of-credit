@@ -23,9 +23,9 @@ export default function Icon(): ImageResponse {
         <svg viewBox="0 0 64 64" width="50" height="50" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="icon-emerald" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#00FF88" />
-              <stop offset="0.55" stopColor="#00C96B" />
-              <stop offset="1" stopColor="#00A65A" />
+              <stop stopColor="#00C97B" />
+              <stop offset="0.55" stopColor="#2FD68B" />
+              <stop offset="1" stopColor="#00A965" />
             </linearGradient>
           </defs>
           <path

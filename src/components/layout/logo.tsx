@@ -16,9 +16,9 @@ export function Logo({ compact = false, href = "/" }: LogoProps) {
     >
       <defs>
         <linearGradient id="poc-emerald" x1="6" y1="8" x2="58" y2="56" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00FF88" />
-          <stop offset="0.52" stopColor="#3DFF74" />
-          <stop offset="1" stopColor="#00A65A" />
+          <stop stopColor="#00C97B" />
+          <stop offset="0.52" stopColor="#32D98D" />
+          <stop offset="1" stopColor="#00A965" />
         </linearGradient>
       </defs>
       <path d="M32 6L54 14V30C54 44 44.8 54.5 32 59C19.2 54.5 10 44 10 30V14L32 6Z" fill="url(#poc-emerald)" />
@@ -31,7 +31,7 @@ export function Logo({ compact = false, href = "/" }: LogoProps) {
     <Link href={href} className="group inline-flex items-center gap-3" aria-label="ProofOfCredit Home">
       {logoGraphic}
       {!compact ? (
-        <span className="bg-gradient-to-r from-[#7DFFA8] via-[#22F07B] to-[#C8FF8A] bg-clip-text text-xl font-semibold tracking-tight text-transparent [text-shadow:0_0_20px_rgba(0,255,136,0.22)]">
+        <span className="bg-gradient-to-r from-[#9DE7C1] via-[#00C97B] to-[#78D9A7] bg-clip-text text-xl font-semibold tracking-tight text-transparent [text-shadow:0_0_20px_rgba(0,201,123,0.2)]">
           ProofOfCredit
         </span>
       ) : null}

@@ -36,7 +36,7 @@ export function WalletStatus() {
               key={connector.uid}
               type="button"
               onClick={() => connect({ connector })}
-              className="rounded-lg border border-[#00A65A] bg-[#00A65A]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00FF88] hover:bg-[#00FF88]/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg border border-[#00A965] bg-[#00A965]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00C97B] hover:bg-[#00C97B]/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isPending}
             >
               {isPending ? "Connecting..." : `Connect ${connector.name}`}
