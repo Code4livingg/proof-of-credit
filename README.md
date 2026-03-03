@@ -1,82 +1,161 @@
 # ProofOfCredit
 
+## Deterministic On-Chain Credit Infrastructure
+
+ProofOfCredit is a governance-adjustable, deterministic credit scoring protocol deployed on Creditcoin testnet.  
+
+It provides an infrastructure layer for transparent, policy-aware, and audit-friendly lending ecosystems.
+
+This project is built as a seed-stage protocol concept designed for institutional and decentralized credit networks.
+
+---
+
 ## Executive Overview
-ProofOfCredit is a seed-stage protocol concept for deterministic, policy-aware, on-chain credit infrastructure. The protocol records repayment activity, enforces lender-gated score updates, and exposes transparent eligibility and tier outputs designed for institutional lending workflows.
+
+Traditional credit systems are fragmented, opaque, and geographically siloed.  
+There is no interoperable, transparent on-chain credit identity layer suitable for institutional integration.
+
+ProofOfCredit introduces:
+
+- On-chain repayment logging
+- Deterministic scoring logic
+- Governance-adjustable eligibility threshold
+- Tier-based credit classification
+- Audit-friendly metadata hash anchoring
+- Lender-permissioned scoring updates
+
+All logic is verifiable and deterministic.
+
+---
 
 ## Market Problem
-Institutional credit systems face structural fragmentation:
-- Cross-border credit context is siloed across disconnected systems.
-- Traditional models are often centralized and opaque to external counterparties.
-- Underwriting integration introduces high onboarding overhead for regulated lenders.
-- Interoperable on-chain credit identity is still limited in production use.
+
+Global credit infrastructure suffers from:
+
+- Cross-border fragmentation
+- Opaque centralized scoring models
+- Institutional onboarding friction
+- Lack of interoperable on-chain credit identity
+- High trust and compliance costs
+
+Blockchain systems lack deterministic, governance-aware credit infrastructure suitable for real-world adoption.
+
+---
 
 ## Protocol Solution
-ProofOfCredit introduces an on-chain state machine for credit operations:
-- Borrowers register directly on-chain.
-- Authorized lenders submit repayment updates.
-- Score updates are deterministic and policy-constrained.
-- Eligibility and tier logic are computed transparently from contract state.
-- Metadata hash anchoring enables audit-friendly reconciliation with external records.
+
+ProofOfCredit acts as an infrastructure layer:
+
+Borrower Wallet  
+→ Authorized Lender  
+→ Smart Contract  
+→ Creditcoin Network  
+
+The protocol ensures:
+
+- Only approved lenders can record repayments
+- Credit scores update deterministically
+- Eligibility is computed transparently
+- Credit tiers are derived mathematically
+- Repayment metadata is permanently anchored
+
+---
 
 ## Technical Architecture
-Core components:
-- Smart contract: governance controls, lender permissions, deterministic scoring, tiering, eligibility checks.
-- Frontend control plane: wallet-connected dashboard, repayment operations, protocol state visibility.
-- Network layer: Creditcoin CC3 testnet for execution, event logs, and immutable state history.
 
-State flow:
-1. Borrower registers
-2. Owner authorizes lender
-3. Lender records repayment + metadata hash
-4. Contract updates score/tier/eligibility deterministically
-5. Events and hash anchors form an auditable trail
+- Smart Contract: Solidity ^0.8.28
+- Network: Creditcoin Testnet (Chain ID 102031)
+- Frontend: Next.js + Wagmi
+- Deployment: Hardhat + Vercel
 
-## Governance Design
-Protocol governance currently includes:
-- Owner-managed lender allowlisting
-- Governance-adjustable eligibility threshold
-- Deterministic tier and eligibility computation
-- Explicit event emission for policy and repayment state changes
+### Core Smart Contract Features
 
-This model is designed to evolve toward multi-party governance while retaining deterministic execution semantics.
+### Governance Layer
+- Owner-adjustable eligibility threshold
+- Lender allowlisting
+- Deterministic eligibility logic
 
-## Deterministic Tiering Model
-Credit tier outputs are defined on-chain:
-- `None`: score = 0
-- `Bronze`: score 1-49
-- `Silver`: score 50-79
-- `Gold`: score >= 80
+### Deterministic Scoring
+- +10 per repayment
+- +5 bonus every 5 repayments
+- Fully on-chain state
 
-Eligibility is threshold-based and owner-adjustable via governance controls.
+### Tier Classification
+- Bronze (1–49)
+- Silver (50–79)
+- Gold (80+)
 
-## Audit Hash Anchoring
-Each repayment operation includes a `bytes32` metadata hash anchor:
-- Enables linkage to off-chain underwriting records without exposing sensitive raw payloads.
-- Supports audit trails, compliance checks, and downstream risk model validation.
+### Audit Hash Anchoring
+Each repayment includes a metadata hash stored immutably on-chain.
+
+---
 
 ## Deployment Details
-Current deployment target:
-- Network: Creditcoin CC3 Testnet
-- Chain ID: 102031
-- Contract: `0xb614D65d26076901Ff32Ca8DDb44EB9B3FB6A136`
 
-Environment variables:
-- `PRIVATE_KEY`
-- `CREDITCOIN_RPC`
-- `NEXT_PUBLIC_PROOF_OF_CREDIT_ADDRESS`
-- `NEXT_PUBLIC_CREDITCOIN_RPC`
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+Network: Creditcoin Testnet  
+Contract Address:
+
+0xb614D65d26076901Ff32Ca8DDb44EB9B3FB6A136
+
+Frontend:
+
+https://proof-of-credit.vercel.app
+
+---
 
 ## Roadmap
-- Q1: Protocol deployment and baseline scoring logic
-- Q2: Operations dashboard and governance controls
-- Q3: Expanded risk engine and integration interfaces
-- Q4: Mainnet readiness and institutional pilot pathways
+
+Q1 – Testnet deployment and governance baseline  
+Q2 – Risk engine expansion  
+Q3 – Off-chain oracle integration  
+Q4 – Mainnet migration  
+
+Long-term goals include cross-chain interoperability and privacy-preserving credit proofs.
+
+---
 
 ## Monetization Model
-ProofOfCredit is positioned as infrastructure software and service:
-- Institutional API access for score, tier, and eligibility integrations
-- Governance service layer for policy management and controls orchestration
-- Enterprise deployment integrations for lender workflows and compliance tooling
 
-No speculative tokenomics are required for this model.
+ProofOfCredit is designed for:
+
+- Institutional API access
+- Governance service layer
+- Enterprise credit infrastructure integration
+- Policy-based scoring frameworks
+
+No speculative tokenomics are introduced at this stage.
+
+---
+
+## Risk & Constraints
+
+We acknowledge:
+
+- Regulatory variability across jurisdictions
+- Potential lender collusion risks
+- Oracle trust assumptions (future phase)
+- Testnet economic limitations
+
+The protocol is designed with responsible scaling in mind.
+
+---
+
+## Why Creditcoin
+
+Creditcoin’s mission aligns directly with transparent, real-world credit infrastructure.
+
+ProofOfCredit demonstrates how deterministic on-chain credit logic can be built, governed, and verified on Creditcoin.
+
+---
+
+## Demo
+
+A structured 2-minute demo flow is included in:
+
+demo-flow.md
+
+---
+
+## License
+
+MIT
