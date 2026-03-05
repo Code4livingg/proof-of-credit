@@ -57,6 +57,11 @@ function txExplorerUrl(hash: string): string {
   return `https://creditcoin-testnet.blockscout.com/tx/${hash}`;
 }
 
+function applyGasBuffer(estimatedGas: bigint): bigint {
+  // Add 20% safety margin to reduce underestimation failures.
+  return (estimatedGas * 12n) / 10n;
+}
+
 export function CreditDashboard() {
   const [lenderAddress, setLenderAddress] = useState("");
   const [borrowerAddress, setBorrowerAddress] = useState("");
@@ -237,6 +242,40 @@ export function CreditDashboard() {
     setWriteErrorMessage(error.message);
   };
 
+  const getFeeOverrides = async () => {
+    const minGasPrice = 1_000_000_000n;
+
+    try {
+      const latestBlock = await publicClient!.getBlock({ blockTag: "latest" });
+
+      if (latestBlock.baseFeePerGas !== null) {
+        const fees = await publicClient!.estimateFeesPerGas();
+        const priorityFee =
+          fees.maxPriorityFeePerGas && fees.maxPriorityFeePerGas > 0n
+            ? fees.maxPriorityFeePerGas
+            : minGasPrice;
+        const maxFee =
+          fees.maxFeePerGas && fees.maxFeePerGas > 0n
+            ? fees.maxFeePerGas
+            : priorityFee * 2n;
+
+        return {
+          maxPriorityFeePerGas: priorityFee,
+          maxFeePerGas: maxFee < priorityFee ? priorityFee : maxFee,
+        };
+      }
+    } catch {
+      // Fall through to legacy gasPrice path.
+    }
+
+    try {
+      const gasPrice = await publicClient!.getGasPrice();
+      return { gasPrice: gasPrice > 0n ? gasPrice : minGasPrice };
+    } catch {
+      return { gasPrice: minGasPrice };
+    }
+  };
+
   const upsertRecentTx = (nextTx: UiTx) => {
     setRecentTxs((prev) => {
       const withoutHash = prev.filter((tx) => tx.hash !== nextTx.hash);
@@ -278,12 +317,22 @@ export function CreditDashboard() {
   const registerBorrower = async () => {
     if (!startAction("Register Borrower")) return;
     try {
+      const estimatedGas = await publicClient!.estimateContractGas({
+        address: proofOfCreditAddress!,
+        abi: proofOfCreditAbi,
+        functionName: "registerBorrower",
+        account: address,
+      });
+      const feeOverrides = await getFeeOverrides();
+
       const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
         functionName: "registerBorrower",
         account: address,
         chainId: expectedChainId,
+        gas: applyGasBuffer(estimatedGas),
+        ...feeOverrides,
       });
 
       setActionLabel(null);
@@ -296,6 +345,15 @@ export function CreditDashboard() {
   const registerLender = async (lender: `0x${string}`) => {
     if (!startAction("Register Lender")) return;
     try {
+      const estimatedGas = await publicClient!.estimateContractGas({
+        address: proofOfCreditAddress!,
+        abi: proofOfCreditAbi,
+        functionName: "registerLender",
+        args: [lender],
+        account: address,
+      });
+      const feeOverrides = await getFeeOverrides();
+
       const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
@@ -303,6 +361,8 @@ export function CreditDashboard() {
         args: [lender],
         account: address,
         chainId: expectedChainId,
+        gas: applyGasBuffer(estimatedGas),
+        ...feeOverrides,
       });
 
       setActionLabel(null);
@@ -315,6 +375,15 @@ export function CreditDashboard() {
   const recordRepayment = async (borrowerAddr: `0x${string}`, metadataHash: `0x${string}`) => {
     if (!startAction("Record Repayment")) return;
     try {
+      const estimatedGas = await publicClient!.estimateContractGas({
+        address: proofOfCreditAddress!,
+        abi: proofOfCreditAbi,
+        functionName: "recordRepayment",
+        args: [borrowerAddr, metadataHash],
+        account: address,
+      });
+      const feeOverrides = await getFeeOverrides();
+
       const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
@@ -322,6 +391,8 @@ export function CreditDashboard() {
         args: [borrowerAddr, metadataHash],
         account: address,
         chainId: expectedChainId,
+        gas: applyGasBuffer(estimatedGas),
+        ...feeOverrides,
       });
 
       setActionLabel(null);
