@@ -26,6 +26,14 @@ type BorrowerData = {
   registered: boolean;
 };
 
+type TxStatus = "submitted" | "confirmed" | "failed";
+
+type UiTx = {
+  hash: `0x${string}`;
+  label: string;
+  status: TxStatus;
+};
+
 const defaultBorrower: BorrowerData = {
   creditScore: 0n,
   totalRepayments: 0n,
@@ -55,9 +63,8 @@ export function CreditDashboard() {
   const [metadataInput, setMetadataInput] = useState("");
   const [actionLabel, setActionLabel] = useState<string | null>(null);
   const [writeErrorMessage, setWriteErrorMessage] = useState<string | null>(null);
-  const [recentRepaymentTxs, setRecentRepaymentTxs] = useState<string[]>([]);
+  const [recentTxs, setRecentTxs] = useState<UiTx[]>([]);
   const [lenderCount, setLenderCount] = useState<number>(0);
-  const [isAwaitingReceipt, setIsAwaitingReceipt] = useState(false);
   const [lastConfirmedTxHash, setLastConfirmedTxHash] = useState<`0x${string}` | undefined>(undefined);
 
   const { address, isConnected } = useAccount();
@@ -199,7 +206,7 @@ export function CreditDashboard() {
     void loadLenderCount();
   }, [lastConfirmedTxHash, publicClient]);
 
-  const busy = isSubmitting || isAwaitingReceipt;
+  const busy = isSubmitting;
 
   const startAction = (label: string) => {
     if (!proofOfCreditAddress) {
@@ -230,6 +237,44 @@ export function CreditDashboard() {
     setWriteErrorMessage(error.message);
   };
 
+  const upsertRecentTx = (nextTx: UiTx) => {
+    setRecentTxs((prev) => {
+      const withoutHash = prev.filter((tx) => tx.hash !== nextTx.hash);
+      return [nextTx, ...withoutHash].slice(0, 8);
+    });
+  };
+
+  const refreshProtocolState = async () => {
+    await Promise.all([
+      ownerQuery.refetch(),
+      borrowerQuery.refetch(),
+      eligibilityQuery.refetch(),
+      tierQuery.refetch(),
+      historyQuery.refetch(),
+      eligibilityThresholdQuery.refetch(),
+    ]);
+  };
+
+  const trackReceiptInBackground = (hash: `0x${string}`, label: string) => {
+    upsertRecentTx({ hash, label, status: "submitted" });
+
+    void publicClient!
+      .waitForTransactionReceipt({ hash, retryCount: 3, retryDelay: 1_000, timeout: 180_000 })
+      .then(async (receipt) => {
+        if (receipt.status === "success") {
+          upsertRecentTx({ hash, label, status: "confirmed" });
+          setLastConfirmedTxHash(hash);
+          await refreshProtocolState();
+          return;
+        }
+
+        upsertRecentTx({ hash, label, status: "failed" });
+      })
+      .catch(() => {
+        upsertRecentTx({ hash, label, status: "submitted" });
+      });
+  };
+
   const registerBorrower = async () => {
     if (!startAction("Register Borrower")) return;
     try {
@@ -241,26 +286,10 @@ export function CreditDashboard() {
         chainId: expectedChainId,
       });
 
-      setIsAwaitingReceipt(true);
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status !== "success") {
-        throw new Error("Borrower registration transaction reverted on-chain.");
-      }
-
-      setLastConfirmedTxHash(txHash);
-      await Promise.all([
-        ownerQuery.refetch(),
-        borrowerQuery.refetch(),
-        eligibilityQuery.refetch(),
-        tierQuery.refetch(),
-        historyQuery.refetch(),
-        eligibilityThresholdQuery.refetch(),
-      ]);
       setActionLabel(null);
+      trackReceiptInBackground(txHash, "Register Borrower");
     } catch (error) {
       handleWriteError(error as Error);
-    } finally {
-      setIsAwaitingReceipt(false);
     }
   };
 
@@ -276,26 +305,10 @@ export function CreditDashboard() {
         chainId: expectedChainId,
       });
 
-      setIsAwaitingReceipt(true);
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status !== "success") {
-        throw new Error("Lender registration transaction reverted on-chain.");
-      }
-
-      setLastConfirmedTxHash(txHash);
-      await Promise.all([
-        ownerQuery.refetch(),
-        borrowerQuery.refetch(),
-        eligibilityQuery.refetch(),
-        tierQuery.refetch(),
-        historyQuery.refetch(),
-        eligibilityThresholdQuery.refetch(),
-      ]);
       setActionLabel(null);
+      trackReceiptInBackground(txHash, "Register Lender");
     } catch (error) {
       handleWriteError(error as Error);
-    } finally {
-      setIsAwaitingReceipt(false);
     }
   };
 
@@ -311,27 +324,10 @@ export function CreditDashboard() {
         chainId: expectedChainId,
       });
 
-      setRecentRepaymentTxs((prev) => [txHash, ...prev].slice(0, 5));
-      setIsAwaitingReceipt(true);
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
-      if (receipt.status !== "success") {
-        throw new Error("Repayment transaction reverted on-chain.");
-      }
-
-      setLastConfirmedTxHash(txHash);
-      await Promise.all([
-        ownerQuery.refetch(),
-        borrowerQuery.refetch(),
-        eligibilityQuery.refetch(),
-        tierQuery.refetch(),
-        historyQuery.refetch(),
-        eligibilityThresholdQuery.refetch(),
-      ]);
       setActionLabel(null);
+      trackReceiptInBackground(txHash, "Record Repayment");
     } catch (error) {
       handleWriteError(error as Error);
-    } finally {
-      setIsAwaitingReceipt(false);
     }
   };
 
@@ -471,17 +467,17 @@ export function CreditDashboard() {
                 {busy && actionLabel === "Record Repayment" ? "Submitting..." : "Record Repayment"}
               </button>
 
-              {recentRepaymentTxs.length > 0 ? (
+              {recentTxs.length > 0 ? (
                 <div className="space-y-2 pt-2">
-                  {recentRepaymentTxs.map((hash) => (
+                  {recentTxs.map((tx) => (
                     <a
-                      key={hash}
-                      href={txExplorerUrl(hash)}
+                      key={tx.hash}
+                      href={txExplorerUrl(tx.hash)}
                       target="_blank"
                       rel="noreferrer"
                       className="block text-xs text-[#9EE4BF] underline underline-offset-2 hover:text-[#00C97B]"
                     >
-                      View Transaction on Explorer
+                      {tx.label}: {tx.status} ({shortenAddress(tx.hash)})
                     </a>
                   ))}
                 </div>
@@ -535,6 +531,20 @@ export function CreditDashboard() {
             Wallet is on chain ID {chainId}. Switch to chain ID {expectedChainId} (Creditcoin Testnet) to submit
             transactions.
           </p>
+        ) : null}
+        {recentTxs.length > 0 ? (
+          <div className="rounded-2xl border border-[#1F2D25] bg-[#101A1F] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6B7F74]">Transaction Activity</p>
+            <ul className="mt-3 space-y-2 text-sm text-[#9EB5A5]">
+              {recentTxs.map((tx) => (
+                <li key={`activity-${tx.hash}`}>
+                  <a href={txExplorerUrl(tx.hash)} target="_blank" rel="noreferrer" className="text-[#9EE4BF] underline">
+                    {tx.label}: {tx.status} - {tx.hash}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
         {writeErrorMessage ? <p className="text-sm text-rose-300">{writeErrorMessage}</p> : null}
       </div>
