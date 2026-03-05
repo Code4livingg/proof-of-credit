@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { isAddress, keccak256, parseAbiItem, stringToHex } from "viem";
+import { isAddress, parseAbiItem } from "viem";
 import {
   useAccount,
   useChainId,
@@ -64,8 +65,6 @@ function applyGasBuffer(estimatedGas: bigint): bigint {
 
 export function CreditDashboard() {
   const [lenderAddress, setLenderAddress] = useState("");
-  const [borrowerAddress, setBorrowerAddress] = useState("");
-  const [metadataInput, setMetadataInput] = useState("");
   const [actionLabel, setActionLabel] = useState<string | null>(null);
   const [writeErrorMessage, setWriteErrorMessage] = useState<string | null>(null);
   const [recentTxs, setRecentTxs] = useState<UiTx[]>([]);
@@ -159,8 +158,6 @@ export function CreditDashboard() {
       ?.map((entry) => (entry.status === "success" ? String(entry.result) : null))
       .filter((value): value is string => Boolean(value))
       .reverse() ?? [];
-
-  const metadataHashPreview = metadataInput ? keccak256(stringToHex(metadataInput)) : undefined;
 
   useEffect(() => {
     const loadLenderCount = async () => {
@@ -372,36 +369,6 @@ export function CreditDashboard() {
     }
   };
 
-  const recordRepayment = async (borrowerAddr: `0x${string}`, metadataHash: `0x${string}`) => {
-    if (!startAction("Record Repayment")) return;
-    try {
-      const estimatedGas = await publicClient!.estimateContractGas({
-        address: proofOfCreditAddress!,
-        abi: proofOfCreditAbi,
-        functionName: "recordRepayment",
-        args: [borrowerAddr, metadataHash],
-        account: address,
-      });
-      const feeOverrides = await getFeeOverrides();
-
-      const txHash = await writeContractAsync({
-        address: proofOfCreditAddress!,
-        abi: proofOfCreditAbi,
-        functionName: "recordRepayment",
-        args: [borrowerAddr, metadataHash],
-        account: address,
-        chainId: expectedChainId,
-        gas: applyGasBuffer(estimatedGas),
-        ...feeOverrides,
-      });
-
-      setActionLabel(null);
-      trackReceiptInBackground(txHash, "Record Repayment");
-    } catch (error) {
-      handleWriteError(error as Error);
-    }
-  };
-
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="grid gap-6">
@@ -501,58 +468,15 @@ export function CreditDashboard() {
             </button>
           </Card>
 
-          <Card title="Repayment Entry" subtitle="Lenders can update borrower repayment history">
+          <Card title="Repayment Operations" subtitle="Record repayments from the dedicated operations page">
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Borrower address (0x...)"
-                value={borrowerAddress}
-                onChange={(event) => setBorrowerAddress(event.target.value.trim())}
-                className="w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A965]"
-              />
-              <textarea
-                placeholder="Repayment metadata text (hashed client-side)"
-                value={metadataInput}
-                onChange={(event) => setMetadataInput(event.target.value)}
-                className="min-h-24 w-full rounded-lg border border-[#1E3A2B] bg-[#0C1A14] px-3 py-2 text-sm text-[#E6F5EC] outline-none transition focus:border-[#00A965]"
-              />
-              <p className="text-xs text-[#9EB5A5]">
-                Metadata hash: {metadataHashPreview ?? "Enter metadata text to generate hash"}
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  void recordRepayment(borrowerAddress as `0x${string}`, metadataHashPreview as `0x${string}`)
-                }
-                disabled={
-                  !isConnected ||
-                  !signerReady ||
-                  !contractReady ||
-                  networkMismatch ||
-                  !isAddress(borrowerAddress) ||
-                  !metadataHashPreview ||
-                  busy
-                }
-                className="rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00C97B] hover:text-[#00C97B] disabled:cursor-not-allowed disabled:opacity-50"
+              <p className="text-sm text-[#9EB5A5]">Record repayments from the Repayments page.</p>
+              <Link
+                href="/repayments"
+                className="inline-flex rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00C97B] hover:text-[#00C97B]"
               >
-                {busy && actionLabel === "Record Repayment" ? "Submitting..." : "Record Repayment"}
-              </button>
-
-              {recentTxs.length > 0 ? (
-                <div className="space-y-2 pt-2">
-                  {recentTxs.map((tx) => (
-                    <a
-                      key={tx.hash}
-                      href={txExplorerUrl(tx.hash)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block text-xs text-[#9EE4BF] underline underline-offset-2 hover:text-[#00C97B]"
-                    >
-                      {tx.label}: {tx.status} ({shortenAddress(tx.hash)})
-                    </a>
-                  ))}
-                </div>
-              ) : null}
+                Go to Repayments
+              </Link>
             </div>
           </Card>
         </div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteShell } from "@/components/layout/site-shell";
 
 export default function LoginPage() {
@@ -8,14 +9,14 @@ export default function LoginPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-[#6B7F74]">Secure Access</p>
           <h1 className="mt-3 text-2xl font-semibold text-[#E6F5EC]">Institutional Login</h1>
           <p className="mt-3 text-sm text-[#9EB5A5]">
-            Connect your wallet to access governance-grade credit infrastructure tools.
+            Wallet connection is available on the Dashboard to keep transaction access in one place.
           </p>
-          <button
-            type="button"
-            className="mt-6 w-full rounded-xl border border-[#00C97B] bg-[#00C97B] px-4 py-3 text-sm font-semibold text-[#08120D] transition hover:opacity-90"
+          <Link
+            href="/dashboard"
+            className="mt-6 inline-flex w-full justify-center rounded-xl border border-[#00C97B] bg-[#00C97B] px-4 py-3 text-sm font-semibold text-[#08120D] transition hover:opacity-90"
           >
-            Connect Wallet
-          </button>
+            Go to Dashboard
+          </Link>
         </section>
       </main>
     </SiteShell>
