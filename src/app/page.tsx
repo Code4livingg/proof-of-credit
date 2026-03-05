@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { SiteShell } from "@/components/layout/site-shell";
-import { deployedProofOfCreditAddress } from "@/lib/contracts/proofOfCredit";
+import { deployedProofOfCreditAddress, proofOfCreditAddress } from "@/lib/contracts/proofOfCredit";
 
-const contractAddress = deployedProofOfCreditAddress;
+const contractAddress = proofOfCreditAddress ?? deployedProofOfCreditAddress;
 
 const statCards = [
   { label: "Credit Score", value: "74", note: "Deterministic output" },

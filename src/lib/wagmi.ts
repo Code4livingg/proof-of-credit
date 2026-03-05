@@ -1,9 +1,15 @@
-import { createConfig, http } from "wagmi";
+import { createConfig } from "wagmi";
 import { injected, walletConnect } from "wagmi/connectors";
-import { defineChain } from "viem";
+import { defineChain, fallback, http } from "viem";
 
-const creditcoinRpcUrl =
-  process.env.NEXT_PUBLIC_CREDITCOIN_RPC ?? "https://rpc.cc3-testnet.creditcoin.network";
+const defaultCreditcoinRpcUrl = "https://rpc.cc3-testnet.creditcoin.network";
+const primaryCreditcoinRpcUrl =
+  process.env.NEXT_PUBLIC_CREDITCOIN_RPC ?? defaultCreditcoinRpcUrl;
+const creditcoinRpcFallbacks = (process.env.NEXT_PUBLIC_CREDITCOIN_RPC_FALLBACKS ?? "")
+  .split(",")
+  .map((url) => url.trim())
+  .filter(Boolean);
+const creditcoinRpcUrls = Array.from(new Set([primaryCreditcoinRpcUrl, ...creditcoinRpcFallbacks]));
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 export const creditcoinTestnet = defineChain({
@@ -15,8 +21,8 @@ export const creditcoinTestnet = defineChain({
     decimals: 18,
   },
   rpcUrls: {
-    default: { http: [creditcoinRpcUrl] },
-    public: { http: [creditcoinRpcUrl] },
+    default: { http: creditcoinRpcUrls },
+    public: { http: creditcoinRpcUrls },
   },
   blockExplorers: {
     default: {
@@ -41,7 +47,15 @@ export const wagmiConfig = createConfig({
       : []),
   ],
   transports: {
-    [creditcoinTestnet.id]: http(),
+    [creditcoinTestnet.id]: fallback(
+      creditcoinRpcUrls.map((url) =>
+        http(url, {
+          timeout: 25_000,
+          retryCount: 3,
+          retryDelay: 700,
+        })
+      )
+    ),
   },
   ssr: true,
 });

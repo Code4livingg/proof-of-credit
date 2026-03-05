@@ -10,7 +10,17 @@ type Props = {
 };
 
 export function Web3Provider({ children }: Props) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 2,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
+          },
+        },
+      })
+  );
 
   return (
     <WagmiProvider config={wagmiConfig}>

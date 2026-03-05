@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
-import { deployedProofOfCreditAddress } from "@/lib/contracts/proofOfCredit";
+import { deployedProofOfCreditAddress, proofOfCreditAddress } from "@/lib/contracts/proofOfCredit";
 
 const productLinks = [
   { href: "/dashboard", label: "Dashboard" },
@@ -19,6 +19,8 @@ const contactLinks = [
 ];
 
 export function Footer() {
+  const contractAddress = proofOfCreditAddress ?? deployedProofOfCreditAddress;
+
   return (
     <footer className="border-t border-[#1A2B23] bg-[#05070A]">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -52,7 +54,7 @@ export function Footer() {
                 </a>
               </li>
             ))}
-            <li className="pt-1 text-[#9EB5A5]">Contract: {`${deployedProofOfCreditAddress.slice(0, 10)}...${deployedProofOfCreditAddress.slice(-6)}`}</li>
+            <li className="pt-1 text-[#9EB5A5]">Contract: {`${contractAddress.slice(0, 10)}...${contractAddress.slice(-6)}`}</li>
           </ul>
         </div>
       </div>

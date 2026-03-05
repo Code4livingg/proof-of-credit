@@ -8,17 +8,17 @@ import {
   usePublicClient,
   useReadContract,
   useReadContracts,
-  useWaitForTransactionReceipt,
+  useWalletClient,
   useWriteContract,
 } from "wagmi";
 import {
-  deployedProofOfCreditAddress,
   proofOfCreditAbi,
   proofOfCreditAddress,
 } from "@/lib/contracts/proofOfCredit";
 import { Card } from "@/components/ui/card";
 import { WalletStatus } from "@/components/dashboard/wallet-status";
 import { AiRiskPanel } from "@/components/dashboard/ai-risk-panel";
+import { creditcoinTestnet } from "@/lib/wagmi";
 
 type BorrowerData = {
   creditScore: bigint;
@@ -57,10 +57,16 @@ export function CreditDashboard() {
   const [writeErrorMessage, setWriteErrorMessage] = useState<string | null>(null);
   const [recentRepaymentTxs, setRecentRepaymentTxs] = useState<string[]>([]);
   const [lenderCount, setLenderCount] = useState<number>(0);
+  const [isAwaitingReceipt, setIsAwaitingReceipt] = useState(false);
+  const [lastConfirmedTxHash, setLastConfirmedTxHash] = useState<`0x${string}` | undefined>(undefined);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  const expectedChainId = creditcoinTestnet.id;
+  const networkMismatch = chainId !== expectedChainId;
+  const signerReady = Boolean(walletClient?.account?.address);
 
   const contractReady = Boolean(proofOfCreditAddress);
 
@@ -102,8 +108,7 @@ export function CreditDashboard() {
     query: { enabled: contractReady && Boolean(address) },
   });
 
-  const { data: txHash, writeContract, isPending: isSubmitting } = useWriteContract();
-  const receiptQuery = useWaitForTransactionReceipt({ hash: txHash });
+  const { writeContractAsync, isPending: isSubmitting } = useWriteContract();
 
   const ownerAddress = ownerQuery.data as string | undefined;
   const isOwner = useMemo(() => {
@@ -153,43 +158,68 @@ export function CreditDashboard() {
       }
 
       const event = parseAbiItem("event LenderRegistered(address indexed lender)");
-      const logs = await publicClient.getLogs({
-        address: proofOfCreditAddress,
-        event,
-        fromBlock: 0n,
-        toBlock: "latest",
-      });
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      const getLogsWithRetry = async (fromBlock: bigint, toBlock: bigint) => {
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            return await publicClient.getLogs({
+              address: proofOfCreditAddress,
+              event,
+              fromBlock,
+              toBlock,
+            });
+          } catch (error) {
+            if (attempt === maxAttempts) throw error;
+            await sleep(500 * attempt);
+          }
+        }
+        return [];
+      };
 
-      setLenderCount(logs.length);
+      try {
+        const latestBlock = await publicClient.getBlockNumber();
+        const chunkSize = 20_000n;
+        let fromBlock = 0n;
+        let totalLogs = 0;
+
+        while (fromBlock <= latestBlock) {
+          const toBlock = fromBlock + chunkSize > latestBlock ? latestBlock : fromBlock + chunkSize;
+          const logs = await getLogsWithRetry(fromBlock, toBlock);
+          totalLogs += logs.length;
+          fromBlock = toBlock + 1n;
+        }
+
+        setLenderCount(totalLogs);
+      } catch (error) {
+        console.error("Failed to load lender count from logs:", error);
+      }
     };
 
     void loadLenderCount();
-  }, [publicClient, receiptQuery.isSuccess]);
+  }, [lastConfirmedTxHash, publicClient]);
 
-  useEffect(() => {
-    if (receiptQuery.isSuccess) {
-      void ownerQuery.refetch();
-      void borrowerQuery.refetch();
-      void eligibilityQuery.refetch();
-      void tierQuery.refetch();
-      void historyQuery.refetch();
-      void eligibilityThresholdQuery.refetch();
-      setActionLabel(null);
-    }
-  }, [
-    borrowerQuery,
-    eligibilityQuery,
-    eligibilityThresholdQuery,
-    historyQuery,
-    ownerQuery,
-    receiptQuery.isSuccess,
-    tierQuery,
-  ]);
-
-  const busy = isSubmitting || receiptQuery.isLoading;
+  const busy = isSubmitting || isAwaitingReceipt;
 
   const startAction = (label: string) => {
-    if (!proofOfCreditAddress) return;
+    if (!proofOfCreditAddress) {
+      setWriteErrorMessage("Contract address is not configured. Set NEXT_PUBLIC_PROOF_OF_CREDIT_ADDRESS.");
+      return false;
+    }
+    if (!publicClient) {
+      setWriteErrorMessage("Public RPC client is not ready. Reconnect wallet and try again.");
+      return false;
+    }
+    if (!isConnected || !address || !signerReady) {
+      setWriteErrorMessage("Wallet signer is not ready. Reconnect wallet and try again.");
+      return false;
+    }
+    if (networkMismatch) {
+      setWriteErrorMessage(
+        `Wallet network mismatch. Switch wallet to chain ID ${expectedChainId} before sending transactions.`
+      );
+      return false;
+    }
     setWriteErrorMessage(null);
     setActionLabel(label);
     return true;
@@ -200,47 +230,109 @@ export function CreditDashboard() {
     setWriteErrorMessage(error.message);
   };
 
-  const registerBorrower = () => {
+  const registerBorrower = async () => {
     if (!startAction("Register Borrower")) return;
-    writeContract(
-      {
+    try {
+      const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
         functionName: "registerBorrower",
-      },
-      { onError: handleWriteError }
-    );
+        account: address,
+        chainId: expectedChainId,
+      });
+
+      setIsAwaitingReceipt(true);
+      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") {
+        throw new Error("Borrower registration transaction reverted on-chain.");
+      }
+
+      setLastConfirmedTxHash(txHash);
+      await Promise.all([
+        ownerQuery.refetch(),
+        borrowerQuery.refetch(),
+        eligibilityQuery.refetch(),
+        tierQuery.refetch(),
+        historyQuery.refetch(),
+        eligibilityThresholdQuery.refetch(),
+      ]);
+      setActionLabel(null);
+    } catch (error) {
+      handleWriteError(error as Error);
+    } finally {
+      setIsAwaitingReceipt(false);
+    }
   };
 
-  const registerLender = (lender: `0x${string}`) => {
+  const registerLender = async (lender: `0x${string}`) => {
     if (!startAction("Register Lender")) return;
-    writeContract(
-      {
+    try {
+      const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
         functionName: "registerLender",
         args: [lender],
-      },
-      { onError: handleWriteError }
-    );
+        account: address,
+        chainId: expectedChainId,
+      });
+
+      setIsAwaitingReceipt(true);
+      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") {
+        throw new Error("Lender registration transaction reverted on-chain.");
+      }
+
+      setLastConfirmedTxHash(txHash);
+      await Promise.all([
+        ownerQuery.refetch(),
+        borrowerQuery.refetch(),
+        eligibilityQuery.refetch(),
+        tierQuery.refetch(),
+        historyQuery.refetch(),
+        eligibilityThresholdQuery.refetch(),
+      ]);
+      setActionLabel(null);
+    } catch (error) {
+      handleWriteError(error as Error);
+    } finally {
+      setIsAwaitingReceipt(false);
+    }
   };
 
-  const recordRepayment = (borrowerAddr: `0x${string}`, metadataHash: `0x${string}`) => {
+  const recordRepayment = async (borrowerAddr: `0x${string}`, metadataHash: `0x${string}`) => {
     if (!startAction("Record Repayment")) return;
-    writeContract(
-      {
+    try {
+      const txHash = await writeContractAsync({
         address: proofOfCreditAddress!,
         abi: proofOfCreditAbi,
         functionName: "recordRepayment",
         args: [borrowerAddr, metadataHash],
-      },
-      {
-        onError: handleWriteError,
-        onSuccess: (hash) => {
-          setRecentRepaymentTxs((prev) => [hash, ...prev].slice(0, 5));
-        },
+        account: address,
+        chainId: expectedChainId,
+      });
+
+      setRecentRepaymentTxs((prev) => [txHash, ...prev].slice(0, 5));
+      setIsAwaitingReceipt(true);
+      const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") {
+        throw new Error("Repayment transaction reverted on-chain.");
       }
-    );
+
+      setLastConfirmedTxHash(txHash);
+      await Promise.all([
+        ownerQuery.refetch(),
+        borrowerQuery.refetch(),
+        eligibilityQuery.refetch(),
+        tierQuery.refetch(),
+        historyQuery.refetch(),
+        eligibilityThresholdQuery.refetch(),
+      ]);
+      setActionLabel(null);
+    } catch (error) {
+      handleWriteError(error as Error);
+    } finally {
+      setIsAwaitingReceipt(false);
+    }
   };
 
   return (
@@ -277,7 +369,9 @@ export function CreditDashboard() {
             </div>
             <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
               <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Contract</p>
-              <p className="mt-2 text-sm font-medium text-[#E6F5EC]">{shortenAddress(deployedProofOfCreditAddress)}</p>
+              <p className="mt-2 text-sm font-medium text-[#E6F5EC]">
+                {proofOfCreditAddress ? shortenAddress(proofOfCreditAddress) : "Not configured"}
+              </p>
             </div>
             <div className="rounded-xl border border-[#1E3A2B] bg-[#0C1A14] p-4">
               <p className="text-xs uppercase tracking-wider text-[#6B7F74]">Chain ID</p>
@@ -332,8 +426,8 @@ export function CreditDashboard() {
           <Card title="Borrower Action" subtitle="Enroll connected wallet as borrower">
             <button
               type="button"
-              onClick={registerBorrower}
-              disabled={!isConnected || !contractReady || busy}
+              onClick={() => void registerBorrower()}
+              disabled={!isConnected || !signerReady || !contractReady || networkMismatch || busy}
               className="rounded-lg border border-[#00A965] bg-[#00A965]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00C97B] hover:bg-[#00C97B]/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy && actionLabel === "Register Borrower" ? "Submitting..." : "Register Borrower"}
@@ -360,8 +454,18 @@ export function CreditDashboard() {
               </p>
               <button
                 type="button"
-                onClick={() => recordRepayment(borrowerAddress as `0x${string}`, metadataHashPreview as `0x${string}`)}
-                disabled={!isConnected || !contractReady || !isAddress(borrowerAddress) || !metadataHashPreview || busy}
+                onClick={() =>
+                  void recordRepayment(borrowerAddress as `0x${string}`, metadataHashPreview as `0x${string}`)
+                }
+                disabled={
+                  !isConnected ||
+                  !signerReady ||
+                  !contractReady ||
+                  networkMismatch ||
+                  !isAddress(borrowerAddress) ||
+                  !metadataHashPreview ||
+                  busy
+                }
                 className="rounded-lg border border-[#2E4A3C] bg-[#12231B] px-4 py-2 text-sm font-medium text-[#E6F5EC] transition hover:border-[#00C97B] hover:text-[#00C97B] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Record Repayment" ? "Submitting..." : "Record Repayment"}
@@ -412,8 +516,8 @@ export function CreditDashboard() {
               />
               <button
                 type="button"
-                onClick={() => registerLender(lenderAddress as `0x${string}`)}
-                disabled={!contractReady || !isAddress(lenderAddress) || busy}
+                onClick={() => void registerLender(lenderAddress as `0x${string}`)}
+                disabled={!isConnected || !signerReady || !contractReady || networkMismatch || !isAddress(lenderAddress) || busy}
                 className="rounded-lg border border-[#00A965] bg-[#00A965]/15 px-4 py-2 text-sm font-medium text-[#CFFFE4] transition hover:border-[#00C97B] hover:bg-[#00C97B]/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy && actionLabel === "Register Lender" ? "Submitting..." : "Register Lender"}
@@ -426,8 +530,13 @@ export function CreditDashboard() {
           </div>
         )}
 
+        {networkMismatch ? (
+          <p className="text-sm text-amber-300">
+            Wallet is on chain ID {chainId}. Switch to chain ID {expectedChainId} (Creditcoin Testnet) to submit
+            transactions.
+          </p>
+        ) : null}
         {writeErrorMessage ? <p className="text-sm text-rose-300">{writeErrorMessage}</p> : null}
-        {receiptQuery.error ? <p className="text-sm text-rose-300">{receiptQuery.error.message}</p> : null}
       </div>
     </main>
   );
